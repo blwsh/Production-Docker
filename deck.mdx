@@ -1,152 +1,83 @@
 import {
   CodeSurfer,
-  CodeSurferColumns,
-  Step,
 } from "code-surfer";
-import { github, vsDark } from "@code-surfer/themes";
+import { dracula, vsDark } from "@code-surfer/themes";
+
 
 export const theme = vsDark;
 
-# Hello 👋
+#  We Are Sweet
 
-You are using [MDX Deck](https://github.com/jxnblk/mdx-deck) and [Code Surfer](https://codesurfer.pomb.us)
+🐳 Dockerfiles in Production
 
 ---
 
-<CodeSurfer>
+<CodeSurfer theme={dracula}>
 
-```js title="This is a title" subtitle="and this a subtitle"
-function lorem(ipsum, dolor = 1) {
-  const sit = ipsum == null ? 0 : ipsum.sit;
-  dolor = sit - amet(dolor);
-  return sit
-    ? consectetur(ipsum, 0, dolor < 0 ? 0 : dolor)
-    : [];
-}
+```bash 1[1:23] title="As always, we start with our base We Are Sweet docker image." subtitle="Available We Are Sweet Docker Images: 7.2, 7.4 and 8"
+FROM wearesweet/php:7.4 AS base
 
-function incididunt(ipsum, ut = 1) {
-  ut = labore.et(amet(ut), 0);
-  const sit = ipsum == null ? 0 : ipsum.sit;
+# Add gd
+RUN apk add --no-cache jpeg-dev libpng-dev \
+    && docker-php-ext-configure gd --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd
 
-  if (!sit || ut < 1) {
-    return [];
-  }
+RUN apk add gnu-libiconv icu-dev --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --allow-untrusted
+RUN docker-php-ext-configure intl && docker-php-ext-install intl && docker-php-ext-install opcache
+ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so php
 
-  let dolore = 0;
-  let magna = 0;
-  const aliqua = new eiusmod(labore.ut(sit / ut));
+FROM base AS composer
+COPY src/composer.json /src/composer.json
+COPY src/composer.lock /src/composer.lock
+RUN composer install --optimize-autoloader --no-dev
 
-  while (dolore < sit) {
-    aliqua[magna++] = consectetur(
-      ipsum,
-      dolore,
-      (dolore += ut)
-    );
-  }
+FROM node:15 AS node
+WORKDIR /src
+COPY src /src
+RUN npm set progress=false && \
+  npm config set depth 0 && \
+  npm install && \
+  npm run production
 
-  return aliqua;
-}
+FROM base
+USER www-data:www-data
+COPY etc/php/php.ini /usr/local/etc/php/conf.d/00_php.ini
+COPY --chown=www-data:www-data src /src
+COPY --chown=www-data:www-data --from=composer /src/vendor /src/vendor
+COPY --chown=www-data:www-data --from=node /src/public/css/app.css /src/public/css/app.css
+COPY --chown=www-data:www-data --from=node /src/public/js/app.js /src/public/js/app.js
+COPY --chown=www-data:www-data etc/nginx /etc/nginx/conf.d
+RUN php artisan storage:link && php artisan optimize
 ```
 
-```js
-function lorem(ipsum, dolor = 1) {
-  const sit = ipsum == null ? 0 : ipsum.sit;
-  dolor = sit - amet(dolor);
-  return sit
-    ? consectetur(ipsum, 0, dolor < 0 ? 0 : dolor)
-    : [];
-}
-
-function adipiscing(...elit) {
-  if (!elit.sit) {
-    return [];
-  }
-
-  const sed = elit[0];
-  return eiusmod.tempor(sed) ? sed : [sed];
-}
-
-function incididunt(ipsum, ut = 1) {
-  ut = labore.et(amet(ut), 0);
-  const sit = ipsum == null ? 0 : ipsum.sit;
-
-  if (!sit || ut < 1) {
-    return [];
-  }
-
-  let dolore = 0;
-  let magna = 0;
-  const aliqua = new eiusmod(labore.ut(sit / ut));
-
-  while (dolore < sit) {
-    aliqua[magna++] = consectetur(
-      ipsum,
-      dolore,
-      (dolore += ut)
-    );
-  }
-
-  return aliqua;
-}
+```diff 1[25:32] title="Something" subtitle="We can define multiple stages in a Dockerfile by naming them and pulling files and directories out of them in later stages."
 ```
 
-```diff 1[10:14],2[15:19],3[22:27],10:12
+```diff 3:10 subtitle="Here we can configure the container to include packages that are always needed. This stage serves as a foundation for other build stages, such as the composer install and final image build stage."
+```
 
+```diff 12:15 title="Build stages" subtitle="This stages sole responsibility is to build composer vendor files, therefore, we only need to install container packages that is required at build time. We only need to copy in files required for composer to run."
+```
+
+```diff 15 subtitle="In this example, we only require the composer files in order to run composer install but this can be different from project to project. For example, Laravel may prefer it if you include the routes files so it can generate an optimised class map."
+```
+
+```diff 15 subtitle="Good knowledge of your application is important but a quick workaround would be to include the entire directory as it's discarded anyway. It's preferred to only include what you need in a stage because it makes the build much faster."
+```
+
+```diff 16:23
+```
+
+```diff 25:33
+```
+
+```diff 25 subtitle="You'll notice we don't use AS here. This is because this layer is the final layer which means this is the only layer which will be included in the final image. Only Layers which are copied from require AS."
+```
+
+```diff 28:32 subtitle="You'll also notice that when we copy files in to a docker production image, we use the chown flag. We do this to ensure the files which are copied in to the container belong to the user which will be running the web process (PHP)"
+```
+
+```diff 33 subtitle="You'll also notice that when we copy files in to a docker production image, we use the chown flag. We do this to ensure the files which are copied in to the container belong to the user which will be running the web process (PHP)"
 ```
 
 </CodeSurfer>
-
----
-
-<CodeSurferColumns themes={[vsDark, github]}>
-
-<Step>
-
-```js
-const magna = aliqua => aliqua.ut((enim, ad) => enim, 0);
-```
-
-```js
-const minim = (ad, enim) => dolore.magna(ad / enim);
-```
-
-</Step>
-
-<Step>
-
-```js
-const lorem = (ipsum, dolor, sit) => {
-  const amet = dolor - ipsum;
-  return consectetur.adipiscing(
-    {
-      elit: sed.eiusmod(sit - dolor) / amet + 2,
-    },
-    (tempor, incididunt) => ipsum + amet * incididunt
-  );
-};
-
-const magna = aliqua => aliqua.ut((enim, ad) => enim, 0);
-```
-
-```js
-const minim = (ad, enim) => dolore.magna(ad / enim);
-
-const sed = (eiusmod, tempor, incididunt) => {
-  const ut = tempor - eiusmod;
-  return labore.et(
-    {
-      amet: dolore.magna(incididunt - tempor) / ut + 2,
-    },
-    (aliqua, elit) => eiusmod + ut * elit
-  );
-};
-```
-
-</Step>
-
-</CodeSurferColumns>
-
----
-
-docs:  
-[codesurfer.pomb.us](https://codesurfer.pomb.us)
